@@ -13,10 +13,10 @@ metadata.create_all(engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await database.connect()
-    print("✅ Connected to database")
+    print("Connected to database")
     yield
     await database.disconnect()
-    print("🔌 Disconnected from database")
+    print("Disconnected from database")
 
 app = FastAPI(lifespan=lifespan)
 
