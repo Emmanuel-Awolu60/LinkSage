@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from db import database, engine, metadata
 from models.link import link_table
-from schemas.link import LinkCreate, LinkRespone
+from schemas.link import LinkCreate, LinkResponse
 from contextlib import asynccontextmanager
 from fastapi.responses import RedirectResponse
 from fastapi import FastAPI, HTTPException
+from sqlalchemy import update
 import secrets
 
 metadata.create_all(engine)
@@ -23,7 +24,7 @@ app = FastAPI(lifespan=lifespan)
 def ping():
     return {"message": "pong"}
 
-@app.post("/shorten", response_model=LinkRespone)
+@app.post("/shorten", response_model=LinkResponse)
 async def shorten_link(link: LinkCreate):
     # To generate unique short code
     short_code = secrets.token_urlsafe(5)[:6]
@@ -48,12 +49,33 @@ async def shorten_link(link: LinkCreate):
 
 @app.get("/{short_code}")
 async def redirect_to_original(short_code: str):
-    # To look up the code in the database
     query = link_table.select().where(link_table.c.short_code == short_code)
     link = await database.fetch_one(query)
 
     if link is None:
-        raise HTTPException(status_code=404, detail = "Short URL not found")
-    
-    # to redirect to the original URL
+        raise HTTPException(status_code=404, detail="Short URL not found")
+
+    # Update the click count
+    update_query = (
+        update(link_table)
+        .where(link_table.c.short_code == short_code)
+        .values(clicks=(link["clicks"] or 0) + 1)
+    )
+    await database.execute(update_query)
+
     return RedirectResponse(url=link["original_url"])
+
+
+@app.get("/stats/{short_code}")
+async def get_stats(short_code: str):
+    query = link_table.select().where(link_table.c.short_code == short_code)
+    link = await database.fetch_one(query)
+
+    if link is None:
+        raise HTTPException(status_code=404, detail="Short URL not found")
+    
+    return{
+        "original_url": link["original_url"],
+        "short_code": link["short_code"],
+        "clicks": link["clicks"]
+    }
