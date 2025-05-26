@@ -4,7 +4,7 @@ from models.link import link_table
 from schemas.link import LinkCreate, LinkResponse
 from contextlib import asynccontextmanager
 from fastapi.responses import RedirectResponse
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy import update
 import secrets
 
@@ -25,18 +25,18 @@ def ping():
     return {"message": "pong"}
 
 @app.post("/shorten", response_model=LinkResponse)
-async def shorten_link(link: LinkCreate):
-    # To generate unique short code
+async def shorten_link(link: LinkCreate, request: Request):
+    # to generate unique short code
     short_code = secrets.token_urlsafe(5)[:6]
 
-    # To check if it already exists
+    # to check if it already exists
     query = link_table.select().where(link_table.c.short_code == short_code)
     existing = await database.fetch_one(query)
 
     if existing:
         raise HTTPException(status_code=400, detail="Short code already exists. Try again.")
     
-    # To insert into database
+    # to insert into database
     insert_query = link_table.insert().values(
         original_url = str(link.original_url), 
         short_code = short_code,
@@ -44,8 +44,15 @@ async def shorten_link(link: LinkCreate):
     await database.execute(insert_query)
 
     # To return the result
-    short_url = f"http://localhost:8000/{short_code}"
-    return{"original_url": str(link.original_url), "short_url": short_url}
+    # short_url = f"http://localhost:8000/{short_code}"
+
+    # Dynamic base URL
+    base_url = str(request.base_url)
+    short_url =f"{base_url}{short_code}"
+    return{
+        "original_url": str(link.original_url),
+        "short_url": short_url
+        }
 
 @app.get("/{short_code}")
 async def redirect_to_original(short_code: str):
