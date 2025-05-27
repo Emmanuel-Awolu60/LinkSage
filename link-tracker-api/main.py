@@ -8,8 +8,10 @@ from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy import update
 from fastapi.middleware.cors import CORSMiddleware
 import secrets
+import os
 
 metadata.create_all(engine)
+BASE_URL = os.getenv("BASE_URL")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -61,6 +63,7 @@ async def shorten_link(link: LinkCreate, request: Request):
         "original_url": str(link.original_url),
         "short_url": short_url
      }
+short_url = f"{BASE_URL}/{short_code}"
 
 @app.get("/{short_code}")
 async def redirect_to_original(short_code: str):
