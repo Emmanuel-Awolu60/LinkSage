@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+# from fastapi import FastAPI
 from db import database, engine, metadata
 from models.link import link_table
 from schemas.link import LinkCreate, LinkResponse
@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi.responses import RedirectResponse
 from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy import update
+from fastapi.middleware.cors import CORSMiddleware
 import secrets
 
 metadata.create_all(engine)
@@ -19,6 +20,13 @@ async def lifespan(app: FastAPI):
     print("Disconnected from database")
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-frontend.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/ping")
 def ping():
@@ -52,7 +60,7 @@ async def shorten_link(link: LinkCreate, request: Request):
     return{
         "original_url": str(link.original_url),
         "short_url": short_url
-        }
+     }
 
 @app.get("/{short_code}")
 async def redirect_to_original(short_code: str):
