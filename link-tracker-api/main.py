@@ -4,7 +4,7 @@ from models.link import link_table
 from schemas.link import LinkCreate, LinkResponse
 from contextlib import asynccontextmanager
 from fastapi.responses import RedirectResponse
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from sqlalchemy import update
 from fastapi.middleware.cors import CORSMiddleware
 import secrets
@@ -53,12 +53,9 @@ async def shorten_link(link: LinkCreate, request: Request):
     )
     await database.execute(insert_query)
 
-    # To return the result
-    # short_url = f"http://localhost:8000/{short_code}"
-
     # Dynamic base URL
-    base_url = str(request.base_url)
-    short_url =f"{base_url}{short_code}"
+    # base_url = str(request.base_url)
+    short_url =f"{str(request.bas_url)}{short_code}"
     return{
         "original_url": str(link.original_url),
         "short_url": short_url
@@ -81,15 +78,6 @@ async def redirect_to_original(short_code: str):
     )
     await database.execute(update_query)
 
-    def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
-        link = db.query(Link).filter(Link.short_code == short_code).first()
-
-        if not link:
-            raise HTTPException(short_code=404, detail="Short URL not found")
-
-        link.clicks += 1
-        db.commit()
-        
     return RedirectResponse(url=link["original_url"])
 
 
