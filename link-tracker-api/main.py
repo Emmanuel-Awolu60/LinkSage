@@ -81,7 +81,18 @@ async def redirect_to_original(short_code: str):
     )
     await database.execute(update_query)
 
+    def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
+        link = db.query(Link).filter(Link.short_code == short_code).first()
+
+        if not link:
+            raise HTTPException(short_code=404, detail="Short URL not found")
+
+        link.clicks += 1
+        db.commit()
+        
     return RedirectResponse(url=link["original_url"])
+
+
 
 
 @app.get("/stats/{short_code}")
