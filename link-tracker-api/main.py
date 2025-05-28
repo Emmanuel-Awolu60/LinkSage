@@ -63,7 +63,7 @@ async def shorten_link(link: LinkCreate, request: Request):
         "original_url": str(link.original_url),
         "short_url": short_url
      }
-short_url = f"{BASE_URL}/{short_code}"
+    short_url = f"{BASE_URL}/{short_code}"
 
 @app.get("/{short_code}")
 async def redirect_to_original(short_code: str):
