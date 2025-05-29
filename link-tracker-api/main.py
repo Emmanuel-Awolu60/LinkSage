@@ -37,7 +37,7 @@ def ping():
 @app.post("/shorten", response_model=LinkResponse)
 async def shorten_link(link: LinkCreate, request: Request):
     # to generate unique short code
-    short_code = secrets.token_urlsafe(5)[:6]
+    short_code = link.custom_code or secrets.token_urlsafe(5)[:6]
 
     # to check if it already exists
     query = link_table.select().where(link_table.c.short_code == short_code)
@@ -50,6 +50,7 @@ async def shorten_link(link: LinkCreate, request: Request):
     insert_query = link_table.insert().values(
         original_url = str(link.original_url), 
         short_code = short_code,
+        expires_at = link.expires_at
     )
     await database.execute(insert_query)
 
@@ -58,7 +59,8 @@ async def shorten_link(link: LinkCreate, request: Request):
     short_url =f"{str(request.bas_url)}{short_code}"
     return{
         "original_url": str(link.original_url),
-        "short_url": short_url
+        "short_url": short_url,
+        "expires_at": link.expires_at
      }
     short_url = f"{BASE_URL}/{short_code}"
 
@@ -69,6 +71,10 @@ async def redirect_to_original(short_code: str):
 
     if link is None:
         raise HTTPException(status_code=404, detail="Short URL not found")
+
+    expires_at = link["expires_at"]
+    if expires_at and expires_at < datatime.utcnow():
+        raise HTTPException(status_code=404, detail="Short URL has expired")
 
     # Update the click count
     update_query = (
