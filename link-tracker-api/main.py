@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from fastapi import FastAPI, HTTPException, Request, Depends
 from sqlalchemy import update
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import delete
 import secrets
 import os
 
@@ -102,3 +103,19 @@ async def get_stats(short_code: str):
         "short_code": link["short_code"],
         "clicks": link["clicks"]
     }
+
+
+@app.delete("/delete/{short_code}")
+async def delete_link(shortt_code: str):
+    # to check if the short link exists
+    query = link_table.select().where(link_table.c.short_code == shortt_code)
+    existing = await database.fetch_one(query)
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Short URL not found")
+    
+    # Proceed to delete
+    delete_query = link_table.delete().where(link_table.c.short_code == shortt_code)
+    await database.execute(delete_query)
+
+    return {"message": "Short URL deleted successfully"}
