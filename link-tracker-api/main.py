@@ -1,18 +1,17 @@
-# from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from sqlalchemy import update
 from db import database, engine, metadata
 from models.link import link_table
 from schemas.link import LinkCreate, LinkResponse
-from contextlib import asynccontextmanager
-from fastapi.responses import RedirectResponse
-from fastapi import FastAPI, HTTPException, Request, Depends
-from sqlalchemy import update
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import delete
+from datetime import datetime
 import secrets
 import os
 
 metadata.create_all(engine)
-BASE_URL = os.getenv("BASE_URL")
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,9 +22,10 @@ async def lifespan(app: FastAPI):
     print("Disconnected from database")
 
 app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-frontend.com"],
+    allow_origins=["https://your-frontend.com", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,13 +57,13 @@ async def shorten_link(link: LinkCreate, request: Request):
 
     # Dynamic base URL
     # base_url = str(request.base_url)
-    short_url =f"{str(request.bas_url)}{short_code}"
+    short_url =f"{str(request.base_url)}{short_code}"
+
     return{
         "original_url": str(link.original_url),
         "short_url": short_url,
         "expires_at": link.expires_at
      }
-    short_url = f"{BASE_URL}/{short_code}"
 
 @app.get("/{short_code}")
 async def redirect_to_original(short_code: str):
@@ -73,8 +73,7 @@ async def redirect_to_original(short_code: str):
     if link is None:
         raise HTTPException(status_code=404, detail="Short URL not found")
 
-    expires_at = link["expires_at"]
-    if expires_at and expires_at < datatime.utcnow():
+    if link["exires_at"] and link["exires_at"] < datetime.utcnow():
         raise HTTPException(status_code=404, detail="Short URL has expired")
 
     # Update the click count
@@ -86,8 +85,6 @@ async def redirect_to_original(short_code: str):
     await database.execute(update_query)
 
     return RedirectResponse(url=link["original_url"])
-
-
 
 
 @app.get("/stats/{short_code}")
@@ -106,9 +103,9 @@ async def get_stats(short_code: str):
 
 
 @app.delete("/delete/{short_code}")
-async def delete_link(shortt_code: str):
+async def delete_link(short_code: str):
     # to check if the short link exists
-    query = link_table.select().where(link_table.c.short_code == shortt_code)
+    query = link_table.select().where(link_table.c.short_code == short_code)
     existing = await database.fetch_one(query)
 
     if not existing:
