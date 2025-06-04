@@ -56,7 +56,7 @@ async def shorten_link(link: LinkCreate, request: Request):
     await database.execute(insert_query)
 
     # Dynamic base URL
-    # base_url = str(request.base_url)
+    base_url = str(request.base_url)
     short_url =f"{str(request.base_url)}{short_code}"
 
     return{
