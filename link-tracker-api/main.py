@@ -74,7 +74,7 @@ async def redirect_to_original(short_code: str):
         raise HTTPException(status_code=404, detail="Short URL not found")
 
     if link["exires_at"] and link["exires_at"] < datetime.utcnow():
-        raise HTTPException(status_code=404, detail="Short URL has expired")
+        raise HTTPException(status_code=404, detail="This Short URL has expired")
 
     # Update the click count
     update_query = (

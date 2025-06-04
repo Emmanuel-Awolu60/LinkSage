@@ -8,7 +8,7 @@ link_table = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("original_url", String, nullable=False),
-    Column("short_code", String, unique=True, index=True),
+    Column("short_code", String, unique=True, nullable=False),
     Column("created_at", DateTime, default=datetime.datetime.utcnow),
     Column("clicks", Integer, default=0),
     Column("expires_at", TIMESTAMP, nullable=True),
